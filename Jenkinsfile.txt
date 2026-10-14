@@ -1,0 +1,96 @@
+pipeline {
+
+    agent any
+
+    environment {
+        APP_SERVER = 'ubuntu@172.31.7.190'
+        APP_DIR = '/home/ubuntu/employee-leave-management'
+        CONTAINER_NAME = 'employee-leave-management'
+        IMAGE_NAME = 'employee-leave-management'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'mvn clean test'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('Deploy Files') {
+
+            steps {
+
+                sshagent(['app-server-ssh']) {
+
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                        ${APP_SERVER} \
+                        "mkdir -p ${APP_DIR}"
+
+                        scp -o StrictHostKeyChecking=no \
+                        target/employee-leave-management.war \
+                        ${APP_SERVER}:${APP_DIR}/
+
+                        scp -o StrictHostKeyChecking=no \
+                        Dockerfile \
+                        ${APP_SERVER}:${APP_DIR}/
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Deploy') {
+
+            steps {
+
+                sshagent(['app-server-ssh']) {
+
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                        ${APP_SERVER} \
+                        "
+                        cd ${APP_DIR} &&
+                        docker build -t ${IMAGE_NAME}:latest . &&
+                        docker stop ${CONTAINER_NAME} || true &&
+                        docker rm ${CONTAINER_NAME} || true &&
+                        docker run -d \
+                            --name ${CONTAINER_NAME} \
+                            -p 9091:8080 \
+                            ${IMAGE_NAME}:latest
+                        "
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+
+            steps {
+
+                sshagent(['app-server-ssh']) {
+
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no \
+                        ${APP_SERVER} \
+                        "
+                        docker ps --filter name=${CONTAINER_NAME}
+                        "
+                    '''
+                }
+            }
+        }
+    }
+}
