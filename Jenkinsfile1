@@ -3,7 +3,7 @@ pipeline {
     agent any
 
     environment {
-        APP_SERVER = 'ubuntu@172.31.26.10'
+        APP_SERVER = 'ubuntu@172.31.17.121'
         APP_DIR = '/home/ubuntu/employee-leave-management'
         CONTAINER_NAME = 'employee-leave-management'
         IMAGE_NAME = 'employee-leave-management'
