@@ -45,7 +45,7 @@ pipeline {
                         ${APP_SERVER}:${APP_DIR}/
 
                         scp -o StrictHostKeyChecking=no \
-                        Dockerfile \
+                        dockerfile \
                         ${APP_SERVER}:${APP_DIR}/
                     '''
                 }
